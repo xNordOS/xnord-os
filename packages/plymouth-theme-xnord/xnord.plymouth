@@ -1,0 +1,7 @@
+[Plymouth Theme]
+Name=x-Nord
+ModuleName=script
+
+[script]
+ImageDir=/usr/share/plymouth/themes/xnord
+ScriptFile=/usr/share/plymouth/themes/xnord/xnord.script

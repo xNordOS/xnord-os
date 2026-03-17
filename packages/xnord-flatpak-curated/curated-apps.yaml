@@ -1,0 +1,49 @@
+# x-Nord OS Curated Flatpak Apps
+# Install: flatpak install --user <app-id>
+# Or use Discover with Flatpak backend
+
+browsers:
+  - org.mozilla.firefox
+  - org.mozilla.firefox.ESR
+
+office:
+  - org.libreoffice.LibreOffice
+  - org.kde.okular
+
+graphics:
+  - org.gimp.GIMP
+  - org.inkscape.Inkscape
+  - org.kde.krita
+
+media:
+  - org.videolan.VLC
+  - org.gnome.Totem
+  - org.kde.elisa
+
+communication:
+  - org.telegram.desktop
+  - io.github.Hexchat
+  - com.discordapp.Discord
+
+development:
+  - org.gnome.Builder
+  - io.atom.Atom
+  - com.visualstudio.code
+
+utilities:
+  - org.gnome.Calculator
+  - org.gnome.FileRoller
+  - org.gnome.eog
+  - org.gnome.Evince
+  - org.gnome.FontViewer
+  - org.gnome.Screenshot
+  - org.gnome.Terminal
+  - org.kde.ark
+  - org.kde.dolphin
+  - org.kde.gwenview
+  - org.kde.kate
+  - org.kde.konsole
+
+system:
+  - org.gnome.Software
+  - com.mattjakeman.ExtensionManager

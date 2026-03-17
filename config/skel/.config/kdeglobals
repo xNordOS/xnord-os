@@ -1,0 +1,7 @@
+[General]
+ColorScheme=x-Nord
+Name=x-Nord
+widgetStyle=breeze
+
+[KDE]
+SingleClick=false

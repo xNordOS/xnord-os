@@ -1,0 +1,18 @@
+/*
+ * x-Nord Plymouth theme script
+ * Nordic-inspired boot splash with X logo
+ * Background: #0f172a (slate-900)
+ */
+
+plymouth.set_refresh_function(refresh);
+plymouth.set_refresh_duration(0.5);
+
+Window.SetBackgroundTopColor(0.059, 0.090, 0.165);
+Window.SetBackgroundBottomColor(0.059, 0.090, 0.165);
+
+logo.image = Image("logo-os.png");
+logo.sprite = Sprite(logo.image);
+logo.sprite.set_position(0.5 - logo.sprite.width / 2, 0.5 - logo.sprite.height / 2);
+
+fun refresh(progress, duration) {
+}

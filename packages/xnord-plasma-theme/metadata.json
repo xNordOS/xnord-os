@@ -1,0 +1,10 @@
+{
+    "KPlugin": {
+        "Authors": [{"Name": "x-Nord OS"}],
+        "Description": "Nordic-inspired Plasma look and feel",
+        "Id": "org.xnord.desktop",
+        "Name": "x-Nord",
+        "Version": "1.0"
+    },
+    "X-Plasma-MainScript": "main.qml"
+}

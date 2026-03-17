@@ -1,0 +1,8 @@
+*.iso
+*.iso.sha256
+*.log
+.DS_Store
+*.swp
+*~
+cubic/
+build/

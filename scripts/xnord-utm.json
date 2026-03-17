@@ -1,0 +1,27 @@
+{
+  "_comment": "x-Nord OS UTM VM reference config. Use these settings when creating a VM in UTM manually. Contact: hello@xnord.co.uk",
+  "name": "x-Nord OS",
+  "architecture": "x86_64",
+  "system": "qemu",
+  "memory": 4096,
+  "memory_unit": "MB",
+  "cpu_cores": 2,
+  "boot": "cdrom",
+  "drives": [
+    {
+      "type": "cdrom",
+      "path": "xnord-os-1.0-amd64.iso",
+      "interface": "ide"
+    }
+  ],
+  "display": true,
+  "network": "shared",
+  "notes": [
+    "1. Open UTM → Create a New Virtual Machine",
+    "2. Choose 'Emulate' (x-Nord is x86_64, needs emulation on Apple Silicon)",
+    "3. Select 'Linux' → 'Other' or 'Ubuntu'",
+    "4. Set RAM: 4096 MB, CPU: 2 cores",
+    "5. Boot ISO: Select xnord-os-1.0-amd64.iso",
+    "6. Start the VM"
+  ]
+}

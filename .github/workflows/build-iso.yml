@@ -1,0 +1,44 @@
+name: Build x-Nord OS ISO
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y squashfs-tools xorriso isolinux syslinux-efi rsync wget curl ca-certificates systemd-container cpio genisoimage
+
+      - name: Build ISO
+        run: |
+          chmod +x scripts/*.sh
+          CI_BUILD=1 ./scripts/ci-build-iso.sh
+        env:
+          WORK_DIR: /tmp/xnord-build
+
+      - name: Generate checksum
+        run: |
+          ./scripts/generate-checksum.sh xnord-os-1.0-amd64.iso
+
+      - name: Verify ISO
+        run: |
+          ./scripts/verify-iso.sh xnord-os-1.0-amd64.iso
+        continue-on-error: true
+
+      - name: Upload ISO artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: xnord-os-iso
+          path: |
+            xnord-os-1.0-amd64.iso
+            xnord-os-1.0-amd64.iso.sha256

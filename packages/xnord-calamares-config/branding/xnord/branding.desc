@@ -1,0 +1,21 @@
+# x-Nord OS Calamares branding
+
+[Images]
+ProductLogo= logo-os.png
+ProductIcon= logo-os.png
+
+[Strings]
+ProductName= "x-Nord OS"
+ProductUrl= "https://xnord.co.uk"
+BootloaderEntryName= "x-Nord OS"
+ProductWelcome= "Welcome to x-Nord OS. A minimal, private, Nordic-inspired Linux distribution."
+
+[Style]
+Font= "Noto Sans"
+FontSize= 12
+WindowBackgroundColor= "#0f172a"
+WindowTextColor= "#f8fafc"
+SidebarBackgroundColor= "#1e293b"
+SidebarTextColor= "#f8fafc"
+SidebarSelectBackgroundColor= "#64748b"
+SidebarSelectTextColor= "#f8fafc"
