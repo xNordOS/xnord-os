@@ -22,7 +22,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y squashfs-tools xorriso isolinux syslinux-efi rsync wget curl ca-certificates systemd-container cpio genisoimage
+          sudo apt-get install -y squashfs-tools xorriso isolinux syslinux-efi grub-efi-amd64-bin rsync wget curl ca-certificates systemd-container cpio genisoimage
 
       - name: Build ISO
         run: |

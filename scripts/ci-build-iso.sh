@@ -1,6 +1,7 @@
 #!/bin/bash
 # Headless x-Nord OS ISO build for CI (no Cubic GUI)
 # Extracts Kubuntu ISO, applies customizations, repacks
+# Builds hybrid ISO for both UEFI and Legacy BIOS boot
 # Contact: hello@xnord.co.uk
 
 set -e
@@ -96,30 +97,119 @@ sudo umount "$WORK_DIR_ABS/chroot"
 sudo umount "$WORK_DIR_ABS/squash"
 sudo umount "$WORK_DIR_ABS/iso"
 
-# Build ISO with xorriso (detect boot structure from original)
-echo "Building final ISO..."
-OUTPUT_ISO="$PROJECT_ROOT/xnord-os-1.0-amd64.iso"
+# === Prepare hybrid UEFI + Legacy BIOS boot ===
 cd "$WORK_DIR_ABS/newiso"
 
-# Kubuntu/Ubuntu 24.04: detect boot images and catalog
-BOOT_IMG=""
-EFI_IMG=""
-BOOT_CATALOG="boot.catalog"
-[ -f boot/grub/i386-pc/eltorito.img ] && BOOT_IMG="boot/grub/i386-pc/eltorito.img"
-[ -f isolinux/isolinux.bin ] && BOOT_IMG="isolinux/isolinux.bin"
-[ -f isolinux/boot.cat ] && BOOT_CATALOG="isolinux/boot.cat"
-[ -f EFI/boot/bootx64.efi ] && EFI_IMG="EFI/boot/bootx64.efi"
-[ -f boot/grub/efi.img ] && EFI_IMG="boot/grub/efi.img"
-
-if [ -n "$BOOT_IMG" ]; then
-    XORRISO_EFI=""
-    [ -n "$EFI_IMG" ] && XORRISO_EFI="-eltorito-alt-boot -e $EFI_IMG -no-emul-boot"
-    xorriso -as mkisofs -r -V "x-Nord OS 1.0" -o "$OUTPUT_ISO" -J -l -cache-inodes \
-        -b "$BOOT_IMG" -c "$BOOT_CATALOG" -no-emul-boot -boot-load-size 4 -boot-info-table \
-        $XORRISO_EFI -isohybrid-gpt-basdat . || \
-    xorriso -as mkisofs -r -V "x-Nord OS 1.0" -o "$OUTPUT_ISO" -J -l .
-else
-    xorriso -as mkisofs -r -V "x-Nord OS 1.0" -o "$OUTPUT_ISO" -J -l .
+# Ensure isolinux structure exists (Kubuntu may use boot/isolinux or isolinux at root)
+if [ -d "boot/isolinux" ] && [ ! -d "isolinux" ]; then
+    echo "Copying isolinux from boot/isolinux..."
+    mkdir -p isolinux
+    cp -a boot/isolinux/* isolinux/
 fi
+if [ ! -d "isolinux" ]; then
+    echo "Error: No isolinux directory found in ISO"
+    find . -name "isolinux.bin" 2>/dev/null || true
+    exit 1
+fi
+
+# Install x-Nord isolinux config
+if [ -f "$PROJECT_ROOT/config/isolinux/isolinux.cfg" ]; then
+    cp "$PROJECT_ROOT/config/isolinux/isolinux.cfg" isolinux/isolinux.cfg
+fi
+
+# Detect initrd filename (Ubuntu may use initrd, initrd.lz, etc.)
+INITRD="initrd"
+for f in initrd initrd.lz initrd.lz4; do
+    if [ -f "casper/$f" ]; then
+        INITRD="$f"
+        break
+    fi
+done
+echo "Using initrd: casper/$INITRD"
+
+# Create EFI/BOOT structure for UEFI boot (required for UTM on Apple Silicon)
+echo "Creating EFI boot structure..."
+mkdir -p EFI/BOOT
+
+# Generate GRUB EFI bootloader
+GRUB_MODS="part_gpt part_msdos fat iso9660 normal boot linux initrd configfile loopback chain efifwsetup efi_gop efi_uga ls search search_label search_fs_uuid search_fs_file gfxterm gfxterm_background test true loadenv"
+if command -v grub-mkimage >/dev/null 2>&1; then
+    grub-mkimage -o EFI/BOOT/BOOTX64.EFI -O x86_64-efi -p /EFI/BOOT \
+        $GRUB_MODS
+else
+    echo "Warning: grub-mkimage not found, extracting from existing ISO..."
+    # Fallback: extract from boot/grub/efi.img if it exists
+    if [ -f "boot/grub/efi.img" ]; then
+        mkdir -p /tmp/efi-mnt
+        sudo mount -o loop,ro boot/grub/efi.img /tmp/efi-mnt 2>/dev/null && {
+            cp -a /tmp/efi-mnt/EFI/BOOT/BOOTX64.EFI EFI/BOOT/ 2>/dev/null || \
+            cp -a /tmp/efi-mnt/efi/boot/bootx64.efi EFI/BOOT/BOOTX64.EFI 2>/dev/null || true
+            sudo umount /tmp/efi-mnt
+        }
+    fi
+fi
+
+# Create grub.cfg for UEFI (use detected initrd)
+cat > EFI/BOOT/grub.cfg << EOF
+set default=0
+set timeout=5
+
+menuentry "xNord OS" {
+  set gfxpayload=keep
+  linux /casper/vmlinuz boot=casper quiet splash ---
+  initrd /casper/$INITRD
+}
+
+menuentry "xNord OS (safe mode)" {
+  linux /casper/vmlinuz boot=casper xforcevesa ---
+  initrd /casper/$INITRD
+}
+EOF
+
+# Update isolinux.cfg with correct initrd path
+if [ -f "isolinux/isolinux.cfg" ]; then
+    sed -i "s|initrd=/casper/[^ ]*|initrd=/casper/$INITRD|g" isolinux/isolinux.cfg
+fi
+
+# Ensure boot.cat exists for isolinux
+if [ ! -f "isolinux/boot.cat" ] && [ -f "isolinux/isolinux.bin" ]; then
+    echo "Generating isolinux boot.cat..."
+    genisoimage -o /dev/null -b isolinux/isolinux.bin -c isolinux/boot.cat \
+        -no-emul-boot -boot-load-size 4 -boot-info-table -V xNordOS . 2>/dev/null || true
+fi
+
+# Determine EFI boot image path (prefer our EFI/BOOT, fallback to existing)
+EFI_BOOT_IMG=""
+[ -f "EFI/BOOT/BOOTX64.EFI" ] && EFI_BOOT_IMG="EFI/BOOT/BOOTX64.EFI"
+[ -z "$EFI_BOOT_IMG" ] && [ -f "EFI/boot/bootx64.efi" ] && EFI_BOOT_IMG="EFI/boot/bootx64.efi"
+[ -z "$EFI_BOOT_IMG" ] && [ -f "boot/grub/efi.img" ] && EFI_BOOT_IMG="boot/grub/efi.img"
+if [ -z "$EFI_BOOT_IMG" ]; then
+    echo "Error: No EFI boot image found. Install grub-efi-amd64-bin for UEFI support."
+    exit 1
+fi
+
+# Build hybrid ISO with xorriso
+echo "Building final hybrid ISO..."
+OUTPUT_ISO="$PROJECT_ROOT/xnord-os-1.0-amd64.iso"
+
+xorriso -as mkisofs \
+    -iso-level 3 \
+    -full-iso9660-filenames \
+    -volid "xNordOS" \
+    -eltorito-boot isolinux/isolinux.bin \
+    -eltorito-catalog isolinux/boot.cat \
+    -no-emul-boot -boot-load-size 4 -boot-info-table \
+    -eltorito-alt-boot \
+    -e "${EFI_BOOT_IMG:-EFI/BOOT/BOOTX64.EFI}" \
+    -no-emul-boot \
+    -isohybrid-gpt-basdat \
+    -o "$OUTPUT_ISO" \
+    . || {
+    echo "Primary xorriso failed, trying fallback..."
+    xorriso -as mkisofs -r -V "xNordOS" -o "$OUTPUT_ISO" -J -l -cache-inodes \
+        -b isolinux/isolinux.bin -c isolinux/boot.cat -no-emul-boot -boot-load-size 4 -boot-info-table \
+        -eltorito-alt-boot -e "${EFI_BOOT_IMG:-EFI/BOOT/BOOTX64.EFI}" -no-emul-boot \
+        -isohybrid-gpt-basdat .
+}
 
 echo "Build complete: $OUTPUT_ISO"
